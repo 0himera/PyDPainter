@@ -3,6 +3,9 @@
 
 import os.path, colorsys
 
+# Circular colour wheel support
+import libs.colorwheel as colorwheel
+
 import libs.gadget
 from libs.gadget import *
 
@@ -276,7 +279,7 @@ def palette_req(screen):
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
-_______[Pick]^^ A^^
+_______[Pick][Wheel]^^ A^^
 [Spread]   [Ex~Copy]
 [Range][1~2~3~4~5~6]
 Speed---------000^^
@@ -292,23 +295,31 @@ Speed---------000^^
     #req.center(screen)
 
     #palette page
-    palette_page = 0
-    palpageg = req.gadget_id("16_8")
-    ppx,ppy,ppw,pph = palpageg.rect
-    palpageg.rect = (ppx-(config.fontx//2),ppy,ppw,pph)
-    palpage_lg = req.gadget_id("13_8")
-    palpage_lg.value = -2
-    palpage_rg = req.gadget_id("17_8")
-    palpage_rg.value = 2
+    palpageg = req.gadget_id("23_8")
+    if palpageg is not None:
+        ppx,ppy,ppw,pph = palpageg.rect
+        palpageg.rect = (ppx-(config.fontx//2),ppy,ppw,pph)
+    palpage_lg = req.gadget_id("20_8")
+    if palpage_lg is not None:
+        palpage_lg.value = -2
+    palpage_rg = req.gadget_id("24_8")
+    if palpage_rg is not None:
+        palpage_rg.value = 2
 
     if len(config.pal) > 32 and not config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
-        palpageg.enabled = True
-        palpage_lg.enabled = True
-        palpage_rg.enabled = True
+        if palpageg is not None:
+            palpageg.enabled = True
+        if palpage_lg is not None:
+            palpage_lg.enabled = True
+        if palpage_rg is not None:
+            palpage_rg.enabled = True
     else:
-        palpageg.enabled = False
-        palpage_lg.enabled = False
-        palpage_rg.enabled = False
+        if palpageg is not None:
+            palpageg.enabled = False
+        if palpage_lg is not None:
+            palpage_lg.enabled = False
+        if palpage_rg is not None:
+            palpage_rg.enabled = False
 
     #color sliders
     colorg = req.gadget_id("13_0")
@@ -453,6 +464,26 @@ Speed---------000^^
                     from_color = color
                     color_action = CA_PICK
                     config.cursor.shape = config.cursor.DROPPER
+                elif ge.gadget.label == "Wheel":
+                    # Open circular colour wheel selector and update current colour
+                    wheel_rgb = colorwheel.colorwheel_req(screen, config)
+                    if wheel_rgb is not None:
+                        # Update palette entry for current colour and propagate changes
+                        if config.color_depth == 16:
+                            # Quantise to 0-255 per channel first then to colour depth later
+                            qrgb = tuple((c // 17) * 17 for c in wheel_rgb)
+                            config.pal[color] = qrgb
+                        else:
+                            config.pal[color] = wheel_rgb
+                        # Re-quantise full palette to ensure consistency with depth
+                        config.pal = config.quantize_palette(config.pal, config.color_depth)
+                        config.set_all_palettes(config.pal)
+                        set_to_color(color)
+                        # Force palette requestor to redraw its background after wheel overlay
+                        # Redraw palette immediately
+                        req.need_redraw = True
+                        req.draw(screen)
+                        pygame.display.update()
                 elif ge.gadget.label >= "1" and ge.gadget.label <= "6":
                     current_range = int(ge.gadget.label)-1
                     palg.maxvalue = current_range
