@@ -41,7 +41,10 @@ Documentation: [Table of Contents](docs/TOC.md)
 
 ## New Feature: Circular Colour Wheel
 
-PyDPainter 2.3 introduces an intuitive HSV circular colour-wheel selector.
+PyDPainter 2.3 introduces an intuitive HSV circular colour-wheel selector. 
+
+<img width="463" height="340" alt="image" src="https://github.com/user-attachments/assets/595a2ab6-e07a-4052-b5ec-4c2652dc6e52" />
+<img width="432" height="435" alt="image" src="https://github.com/user-attachments/assets/f56e51f9-b765-4b59-902a-be7dbe2c5406" />
 
 * Open the palette dialog and press the **[Wheel]** button to display the wheel.
 * Click anywhere on the wheel to choose a hue/saturation value; brightness is fixed at full, but you can refine with the existing HSV sliders.
