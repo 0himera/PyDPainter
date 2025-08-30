@@ -279,7 +279,7 @@ def palette_req(screen):
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
-_______[Pick][Wheel]^^ A^^
+_______[Pick][Shape]^^ A^^
 [Spread]   [Ex~Copy]
 [Range][1~2~3~4~5~6]
 Speed---------000^^
@@ -388,7 +388,7 @@ Speed---------000^^
     color = config.color
     set_to_color(color)
 
-    # --- Mini HSV wheel embedding ---
+    # --- Mini HSV selector embedding ---
     # Place a compact wheel between sliders and the palette swatches on the right
     # We take space from the left side of the palette area for the wheel
     try:
@@ -401,18 +401,39 @@ Speed---------000^^
         new_palg_x = prx + wheel_size + wheel_margin
         palg.rect = (new_palg_x, pry, max(40, prw - wheel_size - wheel_margin), prh)
 
-        # Create and add the mini wheel gadget
+        # Create and add the mini selector gadget (default circle)
         wheel_rect = (prx, pry, wheel_size, wheel_size)
-        wheel_g = colorwheel.ColorWheelGadget(wheel_rect, radius=max(10, wheel_size // 2 - 6))
+        wheel_shape = "circle"
+        wheel_g = colorwheel.ColorWheelGadget(wheel_rect, radius=max(10, wheel_size // 2 - 6), shape=wheel_shape)
         # initialise wheel marker with current colour
         wheel_g.value = tuple(config.pal[color])
         req.add(wheel_g)
     except Exception:
         wheel_g = None
+        wheel_shape = "circle"
     from_color = -1
     color_action = 0
     req.draw(screen)
     config.recompose()
+
+    # Shape toggle button (replaces old Wheel)
+    shape_btn = None
+    # Find the button created from [Shape]
+    try:
+        for g in req.gadgets:
+            if g.type == Gadget.TYPE_BOOL and g.label in ("Shape", "Wheel", "○", "△", "□"):
+                shape_btn = g
+                break
+        # Initialize label with ASCII text to ensure font support
+        if shape_btn is not None:
+            shape_labels = ["CIR", "TRI", "SQR"]# circle
+            shape_btn.need_redraw = True
+    except Exception:
+        shape_btn = None
+
+    # icon map and cycling order
+    shapes = ["circle", "triangle", "square"]
+    shape_icon = {"circle": "CIR", "triangle": "TRI", "square": "SQR"}
 
     while running:
         event = config.xevent.wait()
@@ -486,9 +507,23 @@ Speed---------000^^
                     from_color = color
                     color_action = CA_PICK
                     config.cursor.shape = config.cursor.DROPPER
-                elif ge.gadget.label == "Wheel":
-                    # Deprecated: hide/disable legacy popup wheel
-                    pass
+                # Shape toggle cycles selector geometry
+                elif shape_btn is not None and ge.gadget is shape_btn:
+                    try:
+                        # compute next shape
+                        cur_idx = shapes.index(wheel_shape)
+                        wheel_shape = shapes[(cur_idx + 1) % len(shapes)]
+                        # apply to gadget
+                        if 'wheel_g' in locals() and wheel_g is not None:
+                            wheel_g.set_shape(wheel_shape)
+                            # keep marker consistent with current colour
+                            wheel_g.value = tuple(config.pal[color])
+                        # update button label
+                        shape_btn.label = shape_icon.get(wheel_shape, "CIR")
+                        shape_btn.need_redraw = True
+                        req.need_redraw = True
+                    except Exception:
+                        pass
                 elif ge.gadget.label >= "1" and ge.gadget.label <= "6":
                     current_range = int(ge.gadget.label)-1
                     palg.maxvalue = current_range
