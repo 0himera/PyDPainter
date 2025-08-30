@@ -43,8 +43,10 @@ Documentation: [Table of Contents](docs/TOC.md)
 
 PyDPainter introduces an intuitive HSV circular, square and triangular colour palette selector. 
 
+<img width="474" height="346" alt="image" src="https://github.com/user-attachments/assets/4361813b-9c35-46a9-a986-02b86970412f" />
+<img width="471" height="346" alt="image" src="https://github.com/user-attachments/assets/585b9de5-ea52-4392-bbde-20eb98b1b691" />
 
-* Open the palette dialog and press the **[SQR/TRI/CIR]** button to change the shape of the palette.
+* Open the palette dialog and press the **[SHAPE]** button to change the shape of the palette.
 * Click anywhere on the palette to choose a hue/saturation value; brightness is fixed at full, but you can refine with the existing HSV sliders.
 * The chosen colour updates the current palette entry and stays in sync with the RGB / HSV sliders.
 
