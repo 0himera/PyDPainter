@@ -387,6 +387,28 @@ Speed---------000^^
 
     color = config.color
     set_to_color(color)
+
+    # --- Mini HSV wheel embedding ---
+    # Place a compact wheel between sliders and the palette swatches on the right
+    # We take space from the left side of the palette area for the wheel
+    try:
+        prx, pry, prw, prh = palg.rect
+        wheel_margin = max(6, config.fontx // 2)
+        # Target wheel size around 6-8 text rows, but not exceeding palette height
+        target = max(80, min(7 * config.fonty, prh))
+        wheel_size = min(prh, int(target))
+        # New palette rect shifted right to make room for wheel
+        new_palg_x = prx + wheel_size + wheel_margin
+        palg.rect = (new_palg_x, pry, max(40, prw - wheel_size - wheel_margin), prh)
+
+        # Create and add the mini wheel gadget
+        wheel_rect = (prx, pry, wheel_size, wheel_size)
+        wheel_g = colorwheel.ColorWheelGadget(wheel_rect, radius=max(10, wheel_size // 2 - 6))
+        # initialise wheel marker with current colour
+        wheel_g.value = tuple(config.pal[color])
+        req.add(wheel_g)
+    except Exception:
+        wheel_g = None
     from_color = -1
     color_action = 0
     req.draw(screen)
@@ -465,25 +487,8 @@ Speed---------000^^
                     color_action = CA_PICK
                     config.cursor.shape = config.cursor.DROPPER
                 elif ge.gadget.label == "Wheel":
-                    # Open circular colour wheel selector and update current colour
-                    wheel_rgb = colorwheel.colorwheel_req(screen, config)
-                    if wheel_rgb is not None:
-                        # Update palette entry for current colour and propagate changes
-                        if config.color_depth == 16:
-                            # Quantise to 0-255 per channel first then to colour depth later
-                            qrgb = tuple((c // 17) * 17 for c in wheel_rgb)
-                            config.pal[color] = qrgb
-                        else:
-                            config.pal[color] = wheel_rgb
-                        # Re-quantise full palette to ensure consistency with depth
-                        config.pal = config.quantize_palette(config.pal, config.color_depth)
-                        config.set_all_palettes(config.pal)
-                        set_to_color(color)
-                        # Force palette requestor to redraw its background after wheel overlay
-                        # Redraw palette immediately
-                        req.need_redraw = True
-                        req.draw(screen)
-                        pygame.display.update()
+                    # Deprecated: hide/disable legacy popup wheel
+                    pass
                 elif ge.gadget.label >= "1" and ge.gadget.label <= "6":
                     current_range = int(ge.gadget.label)-1
                     palg.maxvalue = current_range
@@ -504,6 +509,20 @@ Speed---------000^^
                     speed_dirg.value = config.cranges[current_range].get_dir()
                     speed_dirg.need_redraw = True
             elif ge.gadget.type == Gadget.TYPE_CUSTOM:
+                # Mini wheel click -> update current colour and sync sliders/palette
+                if 'wheel_g' in locals() and ge.gadget is wheel_g and ge.type == GadgetEvent.TYPE_GADGETUP:
+                    wheel_rgb = wheel_g.value if isinstance(wheel_g.value, tuple) else None
+                    if wheel_rgb is not None:
+                        if config.color_depth == 16:
+                            qrgb = tuple((c // 17) * 17 for c in wheel_rgb)
+                            config.pal[color] = qrgb
+                        else:
+                            config.pal[color] = wheel_rgb
+                        config.pal = config.quantize_palette(config.pal, config.color_depth)
+                        config.set_all_palettes(config.pal)
+                        set_to_color(color)
+                        # ensure redraw
+                        req.need_redraw = True
                 if ge.gadget.label == "#":
                     if ge.gadget.value >= 0 and ge.gadget.value < len(config.pal):
                         color = ge.gadget.value
@@ -615,6 +634,10 @@ Speed---------000^^
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             colorg.need_redraw = True
             palg.need_redraw = True
+            if 'wheel_g' in locals() and wheel_g is not None:
+                # keep wheel marker in sync with current colour
+                wheel_g.value = tuple(config.pal[color])
+                wheel_g.need_redraw = True
 
             #keep requestor within screen
             (rx,ry,rw,rh) = req.rect
@@ -630,10 +653,19 @@ Speed---------000^^
             config.pixel_req_rect = req.get_screen_rect()
             req.draw(screen)
             config.recompose()
+    # Hide legacy [Wheel] button so users don't click it
+    try:
+        for g in req.gadgets:
+            if g.type == Gadget.TYPE_BOOL and g.label == "Wheel":
+                g.enabled = False
+                gx, gy, gw, gh = g.rect
+                g.rect = (gx, gy, 0, 0)
+                g.need_redraw = True
+    except Exception:
+        pass
+
     config.pixel_req_rect = None
 
     config.truepal = list(config.pal)
     config.pal = config.unique_palette(config.pal)
     config.set_all_palettes(config.pal, config.truepal)
-
-

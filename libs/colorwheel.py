@@ -97,6 +97,26 @@ class ColorWheelGadget(Gadget):
         wheel_rect = self._wheel_surf.get_rect(center=(x + xo + w // 2, y + yo + h // 2))
         screen.blit(self._wheel_surf, wheel_rect)
 
+        # Draw current selection marker if we have a value
+        try:
+            if isinstance(self.value, tuple) and len(self.value) == 3:
+                r, g, b = self.value
+                # Convert to HSV to compute marker position
+                hr, sg, vb = [c / 255.0 for c in (r, g, b)]
+                hue, sat, _ = colorsys.rgb_to_hsv(hr, sg, vb)
+                # Center and radius in screen coords
+                cx = x + xo + w // 2
+                cy = y + yo + h // 2
+                rad = self.radius
+                ang = hue * 2 * math.pi
+                mx = int(round(cx + math.cos(ang) * sat * rad))
+                my = int(round(cy - math.sin(ang) * sat * rad))
+                # Marker: black outer, white inner for contrast
+                pygame.draw.circle(screen, (0, 0, 0), (mx, my), 4)
+                pygame.draw.circle(screen, (255, 255, 255), (mx, my), 2)
+        except Exception:
+            pass
+
     # ------------------------------------------------------------------
     # Event processing – when user clicks inside the wheel we set self.value
     # to the selected RGB tuple and emit a GADGETUP event so parents can act.
